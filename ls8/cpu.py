@@ -2,12 +2,21 @@
 
 import sys
 
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.pc = 0
+        self.ram = [0] * 64
+        self.reg = [[0] * 8] * 8
+        self.ir = None
+        self.ie = None
+        self.fl = None
 
     def load(self):
         """Load a program into memory."""
@@ -60,6 +69,31 @@ class CPU:
 
         print()
 
+    def ram_write(self, address, value):
+        self.ram[address] = value
+
+    def ram_read(self, address):
+        return self.ram[address]
+
     def run(self):
         """Run the CPU."""
-        pass
+        halted = False
+        ir = self.pc
+        while not halted:
+            instruction = self.ram_read(ir)
+            # print(instruction)
+            if instruction == LDI:
+                operand_a = self.ram_read(ir + 1)
+                operand_b = self.ram_read(ir + 2)
+                self.reg[operand_a] = operand_b
+                ir += 3
+            elif instruction == PRN:
+                target_reg = self.ram_read(ir + 1)
+                print(self.reg[target_reg])
+                ir += 2
+            elif instruction == HLT:
+                halted = True
+            else:
+                print(f"Unrecognized instruction: {instruction} at counter: {ir}. Halting program...")
+                ir += 1
+                halted = True
