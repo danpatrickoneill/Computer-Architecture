@@ -2,9 +2,9 @@
 
 import sys
 
-LDI = 0b10000010
-PRN = 0b01000111
-HLT = 0b00000001
+LDI = '10000010'
+PRN = '01000111'
+HLT = '00000001'
 
 class CPU:
     """Main CPU class."""
@@ -18,22 +18,25 @@ class CPU:
         self.ie = None
         self.fl = None
 
-    def load(self):
+    def load(self, filename):
         """Load a program into memory."""
 
         address = 0
 
         # For now, we've just hardcoded a program:
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        program = []
+
+        with open(filename) as p:
+            for line in p:                    
+                # print(line)
+                if line[0] == '#' or line[0] == '\n':
+                    # print("Skipping commented or blank line...")
+                    continue
+                else:
+                    program.append(line[:8])
+
+        print(program)
 
         for instruction in program:
             self.ram[address] = instruction
@@ -83,12 +86,12 @@ class CPU:
             instruction = self.ram_read(ir)
             # print(instruction)
             if instruction == LDI:
-                operand_a = self.ram_read(ir + 1)
-                operand_b = self.ram_read(ir + 2)
+                operand_a = int(self.ram_read(ir + 1), 2)
+                operand_b = int(self.ram_read(ir + 2), 2)
                 self.reg[operand_a] = operand_b
                 ir += 3
             elif instruction == PRN:
-                target_reg = self.ram_read(ir + 1)
+                target_reg = int(self.ram_read(ir + 1), 2)
                 print(self.reg[target_reg])
                 ir += 2
             elif instruction == HLT:
