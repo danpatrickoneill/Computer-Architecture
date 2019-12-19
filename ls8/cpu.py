@@ -6,6 +6,8 @@ LDI = '10000010'
 PRN = '01000111'
 HLT = '00000001'
 MUL = '10100010'
+PUSH = '01000101'
+POP = '01000110'
 
 class CPU:
     """Main CPU class."""
@@ -15,6 +17,7 @@ class CPU:
         self.pc = 0
         self.ram = [0] * 64
         self.reg = [0] * 8
+        self.sp = 48
         self.ir = None
         self.ie = None
         self.fl = None
@@ -103,6 +106,20 @@ class CPU:
                 product = self.reg[target_reg_a] * self.reg[target_reg_b]
                 self.reg[target_reg_a] = product
                 ir += 3
+            elif instruction == PUSH:
+                # print("Pushing...")
+                target_reg = int(self.ram_read(ir + 1), 2)
+                self.sp -= 1
+                self.ram_write(self.sp, self.reg[target_reg])
+                ir += 2
+            elif instruction == POP:
+                # print("Popping...")
+                target_reg = int(self.ram_read(ir + 1), 2)
+                # print(f'Target register: {target_reg}')
+                value = self.ram_read(self.sp)
+                self.sp += 1
+                self.reg[target_reg] = value
+                ir += 2
             elif instruction == HLT:
                 # print("Halting!")
                 halted = True
