@@ -5,6 +5,7 @@ import sys
 LDI = '10000010'
 PRN = '01000111'
 HLT = '00000001'
+MUL = '10100010'
 
 class CPU:
     """Main CPU class."""
@@ -13,7 +14,7 @@ class CPU:
         """Construct a new CPU."""
         self.pc = 0
         self.ram = [0] * 64
-        self.reg = [[0] * 8] * 8
+        self.reg = [0] * 8
         self.ir = None
         self.ie = None
         self.fl = None
@@ -35,8 +36,6 @@ class CPU:
                     continue
                 else:
                     program.append(line[:8])
-
-        print(program)
 
         for instruction in program:
             self.ram[address] = instruction
@@ -85,16 +84,27 @@ class CPU:
         while not halted:
             instruction = self.ram_read(ir)
             # print(instruction)
+            # self.trace()
             if instruction == LDI:
+                # print("Loading immediate...")
                 operand_a = int(self.ram_read(ir + 1), 2)
                 operand_b = int(self.ram_read(ir + 2), 2)
                 self.reg[operand_a] = operand_b
                 ir += 3
             elif instruction == PRN:
+                # print("Printing...")
                 target_reg = int(self.ram_read(ir + 1), 2)
                 print(self.reg[target_reg])
                 ir += 2
+            elif instruction == MUL:
+                # print("Multiplying...")
+                target_reg_a = int(self.ram_read(ir + 1), 2)
+                target_reg_b = int(self.ram_read(ir + 2), 2)
+                product = self.reg[target_reg_a] * self.reg[target_reg_b]
+                self.reg[target_reg_a] = product
+                ir += 3
             elif instruction == HLT:
+                # print("Halting!")
                 halted = True
             else:
                 print(f"Unrecognized instruction: {instruction} at counter: {ir}. Halting program...")
