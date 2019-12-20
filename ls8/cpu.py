@@ -27,7 +27,16 @@ class CPU:
         self.sp = 48
         self.fl = [0] * 8
         self.ie = None
-        # self.ir = None
+        self.ir = None
+        # Branch table setup below
+        self.branch_table = {}
+        self.branch_table[LDI] = self.handle_LDI
+
+    def handle_LDI(self):
+        operand_a = int(self.ram_read(self.ir + 1), 2)
+        operand_b = int(self.ram_read(self.ir + 2), 2)
+        self.reg[operand_a] = operand_b
+        self.ir += 3
 
     def load(self, filename):
         """Load a program into memory."""
@@ -103,86 +112,83 @@ class CPU:
     def run(self):
         """Run the CPU."""
         halted = False
-        ir = self.pc
+        self.ir = self.pc
         while not halted:
-            instruction = int(self.ram_read(ir), 2)
+            instruction = int(str(self.ram_read(self.ir)), 2)
             # print(instruction)
             # self.trace()
             if instruction == LDI:
                 # print("Loading immediate...")
-                operand_a = int(self.ram_read(ir + 1), 2)
-                operand_b = int(self.ram_read(ir + 2), 2)
-                self.reg[operand_a] = operand_b
-                ir += 3
+                self.branch_table[instruction]()
             elif instruction == PRN:
                 # print("Printing...")
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 print(self.reg[target_reg])
-                ir += 2
+                self.ir += 2
             elif instruction == ADD:
                 # print("Adding...")
-                target_reg_a = int(self.ram_read(ir + 1), 2)
-                target_reg_b = int(self.ram_read(ir + 2), 2)
+                target_reg_a = int(self.ram_read(self.ir + 1), 2)
+                target_reg_b = int(self.ram_read(self.ir + 2), 2)
                 self.alu('ADD', target_reg_a, target_reg_b)
-                ir += 3
+                self.ir += 3
             elif instruction == MUL:
                 # print("Multiplying...")
-                target_reg_a = int(self.ram_read(ir + 1), 2)
-                target_reg_b = int(self.ram_read(ir + 2), 2)
+                target_reg_a = int(self.ram_read(self.ir + 1), 2)
+                target_reg_b = int(self.ram_read(self.ir + 2), 2)
                 # product = self.reg[target_reg_a] * self.reg[target_reg_b]
                 # self.reg[target_reg_a] = product
                 self.alu('MUL', target_reg_a, target_reg_b)
-                ir += 3
+                self.ir += 3
             elif instruction == CMP:
-                target_reg_a = int(self.ram_read(ir + 1), 2)
-                target_reg_b = int(self.ram_read(ir + 2), 2)
+                target_reg_a = int(self.ram_read(self.ir + 1), 2)
+                target_reg_b = int(self.ram_read(self.ir + 2), 2)
                 self.alu('CMP', target_reg_a, target_reg_b)
-                ir += 3
+                self.ir += 3
             elif instruction == PUSH:
                 # print("Pushing...")
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 self.sp -= 1
                 self.ram_write(self.sp, self.reg[target_reg])
-                ir += 2
+                self.ir += 2
             elif instruction == POP:
                 # print("Popping...")
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 # print(f'Target register: {target_reg}')
                 value = self.ram_read(self.sp)
                 self.sp += 1
                 self.reg[target_reg] = value
-                ir += 2
+                self.ir += 2
             elif instruction == CALL:
                 # print("Calling...")
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 self.sp -= 1
-                self.ram_write(self.sp, ir + 2)
-                ir = self.reg[target_reg]
+                self.ram_write(self.sp, self.ir + 2)
+                self.ir = self.reg[target_reg]
             elif instruction == RET:
                 # print("Retrieving...")
                 value = self.ram_read(self.sp)
                 self.sp += 1
-                ir = value
+                self.ir = value
             elif instruction == JMP:
-                target_reg = int(self.ram_read(ir + 1), 2)
-                ir = self.reg[target_reg]
+                target_reg = int(self.ram_read(self.ir + 1), 2)
+                self.ir = self.reg[target_reg]
             elif instruction == JEQ:
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 if self.fl[-1] == 1:
-                    ir = self.reg[target_reg]
+                    self.ir = self.reg[target_reg]
                 else:
-                    ir += 2
+                    self.ir += 2
             elif instruction == JNE:
-                target_reg = int(self.ram_read(ir + 1), 2)
+                target_reg = int(self.ram_read(self.ir + 1), 2)
                 if self.fl[-1] == 0:
-                    ir = self.reg[target_reg]
+                    self.ir = self.reg[target_reg]
                 else:
-                    ir += 2
+                    self.ir += 2
             elif instruction == HLT:
                 # print("Halting!")
                 halted = True
                 self.pc = 0
             else:
-                print(f"Unrecognized instruction: {instruction} at counter: {ir}. Halting program...")
-                ir += 1
+                print(f"Unrecognized instruction: {instruction} at counter: {self.ir}. Halting program...")
+                self.ir += 1
                 halted = True
