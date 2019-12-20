@@ -5,10 +5,12 @@ import sys
 LDI = '10000010'
 PRN = '01000111'
 HLT = '00000001'
+ADD = '10100000'
 MUL = '10100010'
 PUSH = '01000101'
 POP = '01000110'
-
+CALL = '01010000'
+RET = '00010001'
 class CPU:
     """Main CPU class."""
 
@@ -51,6 +53,8 @@ class CPU:
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
         #elif op == "SUB": etc
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -99,12 +103,19 @@ class CPU:
                 target_reg = int(self.ram_read(ir + 1), 2)
                 print(self.reg[target_reg])
                 ir += 2
+            elif instruction == ADD:
+                # print("Adding...")
+                target_reg_a = int(self.ram_read(ir + 1), 2)
+                target_reg_b = int(self.ram_read(ir + 2), 2)
+                self.alu('ADD', target_reg_a, target_reg_b)
+                ir += 3
             elif instruction == MUL:
                 # print("Multiplying...")
                 target_reg_a = int(self.ram_read(ir + 1), 2)
                 target_reg_b = int(self.ram_read(ir + 2), 2)
-                product = self.reg[target_reg_a] * self.reg[target_reg_b]
-                self.reg[target_reg_a] = product
+                # product = self.reg[target_reg_a] * self.reg[target_reg_b]
+                # self.reg[target_reg_a] = product
+                self.alu('MUL', target_reg_a, target_reg_b)
                 ir += 3
             elif instruction == PUSH:
                 # print("Pushing...")
@@ -120,6 +131,17 @@ class CPU:
                 self.sp += 1
                 self.reg[target_reg] = value
                 ir += 2
+            elif instruction == CALL:
+                # print("Calling...")
+                target_reg = int(self.ram_read(ir + 1), 2)
+                self.sp -= 1
+                self.ram_write(self.sp, ir + 2)
+                ir = self.reg[target_reg]
+            elif instruction == RET:
+                # print("Retrieving...")
+                value = self.ram_read(self.sp)
+                self.sp += 1
+                ir = value
             elif instruction == HLT:
                 # print("Halting!")
                 halted = True
