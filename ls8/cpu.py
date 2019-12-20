@@ -2,27 +2,32 @@
 
 import sys
 
-LDI = '10000010'
-PRN = '01000111'
-HLT = '00000001'
-ADD = '10100000'
-MUL = '10100010'
-PUSH = '01000101'
-POP = '01000110'
-CALL = '01010000'
-RET = '00010001'
+LDI = 0b10000010
+PRN = 0b01000111
+HLT = 0b00000001
+ADD = 0b10100000
+MUL = 0b10100010
+CMP = 0b10100111
+PUSH = 0b01000101
+POP = 0b01000110
+CALL = 0b01010000
+RET = 0b00010001
+JMP = 0b01010100
+JEQ = 0b01010101
+JNE = 0b01010110
+
 class CPU:
     """Main CPU class."""
 
     def __init__(self):
         """Construct a new CPU."""
         self.pc = 0
-        self.ram = [0] * 64
+        self.ram = [0] * 128
         self.reg = [0] * 8
         self.sp = 48
-        self.ir = None
+        self.fl = [0] * 8
         self.ie = None
-        self.fl = None
+        # self.ir = None
 
     def load(self, filename):
         """Load a program into memory."""
@@ -52,9 +57,20 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.fl[-3] = 1
+                self.fl[-1], self.fl[-2] = 0, 0
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.fl[-2] = 1
+                self.fl[-1], self.fl[-3] = 0, 0
+            else:
+                self.fl[-1] = 1
+                self.fl[-2], self.fl[-3] = 0, 0
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -89,7 +105,7 @@ class CPU:
         halted = False
         ir = self.pc
         while not halted:
-            instruction = self.ram_read(ir)
+            instruction = int(self.ram_read(ir), 2)
             # print(instruction)
             # self.trace()
             if instruction == LDI:
@@ -117,6 +133,11 @@ class CPU:
                 # self.reg[target_reg_a] = product
                 self.alu('MUL', target_reg_a, target_reg_b)
                 ir += 3
+            elif instruction == CMP:
+                target_reg_a = int(self.ram_read(ir + 1), 2)
+                target_reg_b = int(self.ram_read(ir + 2), 2)
+                self.alu('CMP', target_reg_a, target_reg_b)
+                ir += 3
             elif instruction == PUSH:
                 # print("Pushing...")
                 target_reg = int(self.ram_read(ir + 1), 2)
@@ -142,9 +163,25 @@ class CPU:
                 value = self.ram_read(self.sp)
                 self.sp += 1
                 ir = value
+            elif instruction == JMP:
+                target_reg = int(self.ram_read(ir + 1), 2)
+                ir = self.reg[target_reg]
+            elif instruction == JEQ:
+                target_reg = int(self.ram_read(ir + 1), 2)
+                if self.fl[-1] == 1:
+                    ir = self.reg[target_reg]
+                else:
+                    ir += 2
+            elif instruction == JNE:
+                target_reg = int(self.ram_read(ir + 1), 2)
+                if self.fl[-1] == 0:
+                    ir = self.reg[target_reg]
+                else:
+                    ir += 2
             elif instruction == HLT:
                 # print("Halting!")
                 halted = True
+                self.pc = 0
             else:
                 print(f"Unrecognized instruction: {instruction} at counter: {ir}. Halting program...")
                 ir += 1
